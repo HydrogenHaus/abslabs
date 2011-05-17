@@ -6,15 +6,16 @@ import threading
 import alsaaudio
 import numpy
 import struct
-from showFFT import powerToColor
+from showFFT import powerToColor, updateRoom
 from lightUtil import * 
+from lightBuffer import lightBuffer
 
 MAX_POWER = 10000000000000.
 THRESHOLD = MAX_POWER / 3
 
 class track(threading.Thread):
 
-    def __init__(self, file, loops=0, lightInst=lights(24)):
+    def __init__(self, file, loops=0, lightInst=lights(10)):
 
         self.device = alsaaudio.PCM(card='default')
         self.file = wave.open(file, 'rb')
@@ -24,6 +25,8 @@ class track(threading.Thread):
         self.frms = self.file.getnframes()
         self.code = '<'
         self.lightInst = lightInst
+        self.lightThread = None
+        self.lightBuf = lightBuffer()
 
         self.device.setchannels(self.chan)
         self.device.setrate(self.rate)
@@ -85,33 +88,29 @@ class track(threading.Thread):
                         self.ch2.append(*struct.unpack(self.code,frame[self.samp:2*self.samp]))
                 
                 if self.integ_count >= self.integ_time:
+
+                    ###### Perform the FFT #########
                     self.fft = numpy.fft.rfft(numpy.array(self.integ_samp))
                     self.power = list( numpy.real((self.fft*self.fft.conjugate())[0:self.spec_size]) )
-                    sum = 0
-                    for band in range(0, self.lightInst.number): 
-                        sum = sum + self.power[band]
-                    average = sum / self.lightInst.number
-                    for light in range(0, self.lightInst.number):
-                        color = powerToColor( self.power[light] )
-                        if (average >= THRESHOLD ):
-                            color = (color[0], color[1], 255)
-                        self.lightInst.setLight( light , color )
-                    self.lightInst.update()
+
+                    #### Update the lights #####
+                    self.lightBuf.update(self, self.lightInst)
+
                     self.integ_samp = []
                     self.integ_count = 0
                 else:
                     self.integ_samp += self.ch1
                     self.integ_count += 1
 
+                ###### Play the audio ######
                 if not self.paus:
                     if not self.mutd:
                         self.device.write(data)
                     self.pos += self.step
 
             else:
-
-                    self.done = True
-                    self.lightInst.setLight( light, black)
+                ###### We are finished #####
+                self.done = True
 
 
     def stop(self):
