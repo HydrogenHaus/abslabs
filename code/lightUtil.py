@@ -90,6 +90,7 @@ def setState(state, ip=DIMENSIONX, port=6038):
     fmt = "<LHHLBxHlB"+str(len(arr))+"s"
     hdr = 0x4adc0104, 0x0001, 0x0101, 0, 0, 0, -1, 0, arr.tostring()
     out = pack(fmt, *hdr)
+    print str(out)
     socket(AF_INET, SOCK_DGRAM).sendto(out, (ip, port))
 
 
@@ -119,6 +120,7 @@ class lights():
 	self.reset()
     def update(self):
         setState(self.state, self.ip, self.port)
+        
     def reset(self, color=(0,0,0)):
         for light in range(self.number):
             self.state[light] = color
