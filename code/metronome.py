@@ -25,7 +25,7 @@ class metronome(Thread):
         self.tfirst = self.tlast = tstart = told = time()
         tend = tstart + self.step
         while not self.quit:
-		while not self.pause:
+	        while not self.pause:
             	self.func()
             	if self.debug:
                 	s = int(tend-told)
